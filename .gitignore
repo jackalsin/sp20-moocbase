@@ -5,6 +5,7 @@
 # Ignore all maven build and test files
 target/*
 *.class
+*/surefire-reports/*
 
 # Eclipse
 .classpath

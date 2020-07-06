@@ -1,20 +1,24 @@
 package edu.berkeley.cs186.database.index;
 
-import java.io.IOException;
-import java.io.FileWriter;
-import java.io.UncheckedIOException;
-import java.util.*;
-
 import edu.berkeley.cs186.database.TransactionContext;
+import edu.berkeley.cs186.database.binarySearch.BinarySearch;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.concurrency.LockContext;
-import edu.berkeley.cs186.database.concurrency.LockType;
-import edu.berkeley.cs186.database.concurrency.LockUtil;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.table.RecordId;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * A persistent B+ tree.
@@ -136,10 +140,9 @@ public class BPlusTree {
      */
     public Optional<RecordId> get(DataBox key) {
         typecheck(key);
-        // TODO(proj2): implement
         // TODO(proj4_part3): B+ tree locking
-
-        return Optional.empty();
+        final LeafNode leafNode = root.get(key);
+        return leafNode.getKey(key);
     }
 
     /**
@@ -189,10 +192,8 @@ public class BPlusTree {
      * memory will receive 0 points.
      */
     public Iterator<RecordId> scanAll() {
-        // TODO(proj2): Return a BPlusTreeIterator.
         // TODO(proj4_part3): B+ tree locking
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -220,10 +221,13 @@ public class BPlusTree {
      */
     public Iterator<RecordId> scanGreaterEqual(DataBox key) {
         typecheck(key);
-        // TODO(proj2): Return a BPlusTreeIterator.
         // TODO(proj4_part3): B+ tree locking
-
-        return Collections.emptyIterator();
+        final LeafNode cur = root.get(key);
+        final int bi = BinarySearch.getFirstGreaterThanOrEqualsTo(cur.getKeys(), key);
+        final List<RecordId> curRids = cur.getRids();
+        return new BPlusTreeIterator(
+            cur,
+            curRids.subList(bi, curRids.size()).iterator());
     }
 
     /**
@@ -237,10 +241,18 @@ public class BPlusTree {
      */
     public void put(DataBox key, RecordId rid) {
         typecheck(key);
-        // TODO(proj2): implement
         // TODO(proj4_part3): B+ tree locking
-
-        return;
+        final Optional<Pair<DataBox, Long>> op = root.put(key, rid);
+        if (op.isPresent()) {
+            final BPlusNode curRoot = root;
+            final List<DataBox> newKeys = new ArrayList<>();
+            final List<Long> newChildren = new ArrayList<>();
+            newKeys.add(op.get().getFirst());
+            newChildren.add(curRoot.getPage().getPageNum());
+            newChildren.add(op.get().getSecond());
+            final BPlusNode root = new InnerNode(metadata, bufferManager, newKeys, newChildren, lockContext);
+            updateRoot(root);
+        }
     }
 
     /**
@@ -261,10 +273,20 @@ public class BPlusTree {
      * bulkLoad (see comments in BPlusNode.bulkLoad).
      */
     public void bulkLoad(Iterator<Pair<DataBox, RecordId>> data, float fillFactor) {
-        // TODO(proj2): implement
         // TODO(proj4_part3): B+ tree locking
-
-        return;
+        while (data.hasNext()) {
+            final Optional<Pair<DataBox, Long>> op = root.bulkLoad(data, fillFactor);
+            if (op.isPresent()) {
+                final BPlusNode curRoot = root;
+                final List<DataBox> newKeys = new ArrayList<>();
+                final List<Long> newChildren = new ArrayList<>();
+                newKeys.add(op.get().getFirst());
+                newChildren.add(curRoot.getPage().getPageNum());
+                newChildren.add(op.get().getSecond());
+                final BPlusNode root = new InnerNode(metadata, bufferManager, newKeys, newChildren, lockContext);
+                updateRoot(root);
+            }
+        }
     }
 
     /**
@@ -280,10 +302,8 @@ public class BPlusTree {
      */
     public void remove(DataBox key) {
         typecheck(key);
-        // TODO(proj2): implement
         // TODO(proj4_part3): B+ tree locking
-
-        return;
+        root.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
@@ -383,21 +403,40 @@ public class BPlusTree {
     }
 
     // Iterator ////////////////////////////////////////////////////////////////
-    private class BPlusTreeIterator implements Iterator<RecordId> {
-        // TODO(proj2): Add whatever fields and constructors you want here.
+    private final class BPlusTreeIterator implements Iterator<RecordId> {
+
+        private LeafNode cur;
+        private Iterator<RecordId> itr;
+
+        public BPlusTreeIterator(LeafNode cur, final Iterator<RecordId> itr) {
+            this.cur = cur;
+            this.itr = itr;
+        }
+
+        public BPlusTreeIterator() {
+            this.cur = root.getLeftmostLeaf();
+            this.itr = this.cur.getRids().iterator();
+        }
 
         @Override
         public boolean hasNext() {
-            // TODO(proj2): implement
-
+            if (itr.hasNext()) {
+                return true;
+            }
+            if (cur.getRightSibling().isPresent()) { // move to right one.
+                cur = cur.getRightSibling().get();
+                itr = cur.getRids().iterator();
+                return true;
+            }
             return false;
         }
 
         @Override
         public RecordId next() {
-            // TODO(proj2): implement
-
-            throw new NoSuchElementException();
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            return itr.next();
         }
     }
 }

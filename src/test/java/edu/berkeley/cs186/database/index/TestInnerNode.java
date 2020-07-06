@@ -1,30 +1,38 @@
 package edu.berkeley.cs186.database.index;
 
-import java.util.*;
-
 import edu.berkeley.cs186.database.TimeoutScaling;
+import edu.berkeley.cs186.database.categories.Proj2Tests;
+import edu.berkeley.cs186.database.categories.PublicTests;
+import edu.berkeley.cs186.database.categories.SystemTests;
 import edu.berkeley.cs186.database.concurrency.DummyLockContext;
 import edu.berkeley.cs186.database.concurrency.LockContext;
+import edu.berkeley.cs186.database.databox.DataBox;
+import edu.berkeley.cs186.database.databox.IntDataBox;
+import edu.berkeley.cs186.database.databox.Type;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.io.MemoryDiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.BufferManagerImpl;
 import edu.berkeley.cs186.database.memory.ClockEvictionPolicy;
 import edu.berkeley.cs186.database.recovery.DummyRecoveryManager;
-import org.junit.*;
+import edu.berkeley.cs186.database.table.RecordId;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import edu.berkeley.cs186.database.categories.*;
-import edu.berkeley.cs186.database.common.Pair;
-import edu.berkeley.cs186.database.databox.DataBox;
-import edu.berkeley.cs186.database.databox.IntDataBox;
-import edu.berkeley.cs186.database.databox.Type;
-import edu.berkeley.cs186.database.table.RecordId;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 @Category(Proj2Tests.class)
 public class TestInnerNode {
@@ -206,17 +214,17 @@ public class TestInnerNode {
         LeafNode leaf0 = getLeaf(this.leaf0);
         assertNotNull(leaf0);
         for (int i = 0; i < 10; ++i) {
-            assertEquals(leaf0, inner.get(new IntDataBox(i)));
+            assertEquals(String.format("Failed on i = %d", i), leaf0, inner.get(new IntDataBox(i)));
         }
 
         LeafNode leaf1 = getLeaf(this.leaf1);
         for (int i = 10; i < 20; ++i) {
-            assertEquals(leaf1, inner.get(new IntDataBox(i)));
+            assertEquals(String.format("Failed on i = %d", i), leaf1, inner.get(new IntDataBox(i)));
         }
 
         LeafNode leaf2 = getLeaf(this.leaf2);
         for (int i = 20; i < 30; ++i) {
-            assertEquals(leaf2, inner.get(new IntDataBox(i)));
+            assertEquals(String.format("Failed on i = %d", i), leaf2, inner.get(new IntDataBox(i)));
         }
     }
 
