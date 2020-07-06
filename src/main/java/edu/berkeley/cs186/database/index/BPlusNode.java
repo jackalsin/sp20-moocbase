@@ -1,8 +1,5 @@
 package edu.berkeley.cs186.database.index;
 
-import java.util.Iterator;
-import java.util.Optional;
-
 import edu.berkeley.cs186.database.common.Buffer;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.concurrency.LockContext;
@@ -10,6 +7,9 @@ import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.RecordId;
+
+import java.util.Iterator;
+import java.util.Optional;
 
 /**
  * An inner node or a leaf node. See InnerNode and LeafNode for more
@@ -133,6 +133,9 @@ abstract class BPlusNode {
      * Our B+ trees do not support duplicate entries with the same key. If a
      * duplicate key is inserted, the tree is left unchanged and an exception is
      * raised.
+     *
+     * @return Optional.empty() if not overflow; otherwise, (split_key, right_node_page_num)
+     * @throws BPlusTreeException if duplicate key is inserted.
      */
     public abstract Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid);
 
