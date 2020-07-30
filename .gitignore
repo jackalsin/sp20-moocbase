@@ -6,6 +6,7 @@
 target/*
 *.class
 */surefire-reports/*
+${env.MAVEN_TEMP}/*
 
 # Eclipse
 .classpath

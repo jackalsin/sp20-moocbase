@@ -1,22 +1,25 @@
 package edu.berkeley.cs186.database.query;
 
-import java.util.*;
-
 import edu.berkeley.cs186.database.TransactionContext;
 import edu.berkeley.cs186.database.common.iterator.BacktrackingIterator;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.Record;
 
-class BNLJOperator extends JoinOperator {
-    protected int numBuffers;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
-    BNLJOperator(QueryOperator leftSource,
-                 QueryOperator rightSource,
-                 String leftColumnName,
-                 String rightColumnName,
-                 TransactionContext transaction) {
-        super(leftSource, rightSource, leftColumnName, rightColumnName, transaction, JoinType.BNLJ);
+class BNLJOperator extends JoinOperator {
+  protected int numBuffers;
+
+  BNLJOperator(QueryOperator leftSource,
+               QueryOperator rightSource,
+               String leftColumnName,
+               String rightColumnName,
+               TransactionContext transaction) {
+    super(leftSource, rightSource, leftColumnName, rightColumnName, transaction, JoinType.BNLJ);
 
         this.numBuffers = transaction.getWorkMemSize();
 
@@ -61,7 +64,6 @@ class BNLJOperator extends JoinOperator {
         private Record leftRecord = null;
         // The next record to return
         private Record nextRecord = null;
-
         private BNLJIterator() {
             super();
 
@@ -70,8 +72,8 @@ class BNLJOperator extends JoinOperator {
 
             this.rightIterator = BNLJOperator.this.getPageIterator(this.getRightTableName());
             this.rightIterator.markNext();
-            fetchNextRightPage();
-
+          fetchNextRightPage();
+          this.rightRecordIterator.markNext();
             try {
                 this.fetchNextRecord();
             } catch (NoSuchElementException e) {
@@ -88,7 +90,13 @@ class BNLJOperator extends JoinOperator {
          * and leftRecord should be set to null.
          */
         private void fetchNextLeftBlock() {
-            // TODO(proj3_part1): implement
+          leftRecordIterator = getBlockIterator(this.getLeftTableName(), leftIterator, numBuffers - 2);
+          if (leftRecordIterator.hasNext()) {
+            leftRecord = leftRecordIterator.next();
+          } else {
+            leftRecordIterator = null;
+            leftRecord = null;
+          }
         }
 
         /**
@@ -100,35 +108,73 @@ class BNLJOperator extends JoinOperator {
          * should be set to null.
          */
         private void fetchNextRightPage() {
-            // TODO(proj3_part1): implement
+          rightRecordIterator = getBlockIterator(this.getRightTableName(), rightIterator, 1);
+          if (leftRecordIterator == null && leftRecord == null) {
+            rightRecordIterator = null;
+          }
         }
 
-        /**
-         * Fetches the next record to return, and sets nextRecord to it. If there are no more
-         * records to return, a NoSuchElementException should be thrown.
-         *
-         * @throws NoSuchElementException if there are no more Records to yield
-         */
-        private void fetchNextRecord() {
-            // TODO(proj3_part1): implement
+      /**
+       * Fetches the next record to return, and sets nextRecord to it. If there are no more
+       * records to return, a NoSuchElementException should be thrown.
+       *
+       * @throws NoSuchElementException if there are no more Records to yield
+       */
+      private void fetchNextRecord() {
+        if (leftRecord == null) {
+          throw new NoSuchElementException();
         }
+        this.nextRecord = null;
+        while (leftRecord != null) {
+          while (rightRecordIterator != null) {
+            // if we can move right, we move right.
+            if (rightRecordIterator.hasNext()) {
+              final Record rightRecord = rightRecordIterator.next();
+              final DataBox leftJoinKey = leftRecord.getValues().get(getLeftColumnIndex()),
+                  rightJoinKey = rightRecord.getValues().get(getRightColumnIndex());
+              if (leftJoinKey.equals(rightJoinKey)) {
+                nextRecord = joinRecords(leftRecord, rightRecord);
+                return; // found
+              }
+            } else {
+              // move nextLeft
+              if (leftRecordIterator != null && leftRecordIterator.hasNext()) {
+                // left is clear
+                leftRecord = leftRecordIterator.next();
+              } else {
+                fetchNextLeftBlock();
+                fetchNextRightPage();
+              }
+              resetRight();
+            }
+          } // end of while rightRecordIterator
+        }
+      }
 
-        /**
-         * Helper method to create a joined record from a record of the left relation
-         * and a record of the right relation.
-         * @param leftRecord Record from the left relation
-         * @param rightRecord Record from the right relation
-         * @return joined record
-         */
+      private void resetRight() {
+        if (rightRecordIterator != null) {
+          rightRecordIterator.reset();
+          rightRecordIterator.markNext();
+        }
+      }
+
+      /**
+       * Helper method to create a joined record from a record of the left relation
+       * and a record of the right relation.
+       *
+       * @param leftRecord  Record from the left relation
+       * @param rightRecord Record from the right relation
+       * @return joined record
+       */
         private Record joinRecords(Record leftRecord, Record rightRecord) {
-            List<DataBox> leftValues = new ArrayList<>(leftRecord.getValues());
-            List<DataBox> rightValues = new ArrayList<>(rightRecord.getValues());
-            leftValues.addAll(rightValues);
-            return new Record(leftValues);
+            final List<DataBox> leftValues = new ArrayList<>(leftRecord.getValues()),
+                rightValues = new ArrayList<>(rightRecord.getValues());
+          leftValues.addAll(rightValues);
+          return new Record(leftValues);
         }
 
-        /**
-         * Checks if there are more record(s) to yield
+      /**
+       * Checks if there are more record(s) to yield
          *
          * @return true if this iterator has another record to yield, otherwise false
          */
