@@ -142,24 +142,15 @@ public class SortOperator {
     public String sort() {
         List<Run> sortedRuns = new ArrayList<>();
         final BacktrackingIterator<Page> pageItr = this.transaction.getPageIterator(this.tableName);
-        int pageItrCount = 0;
-//        System.out.println("num of entries on a page " + transaction.getNumEntriesPerPage(this.tableName));
         while (pageItr.hasNext()) {
             final BacktrackingIterator<Record> itr = this.transaction.getBlockIterator(this.tableName, pageItr,
                 this.numBuffers);
-//            System.out.println("pageItrCount" + pageItrCount);
-            final Run run = createRun();
-            while (itr.hasNext()) {
-                final Record r = itr.next();
-                run.addRecord(r.getValues());
-            }
+            final Run run = createRunFromIterator(itr);
             sortedRuns.add(sortRun(run));
         }
-//        System.out.println(sortedRuns.size());
-//        while (sortedRuns.size() > 1) {
-//            sortedRuns = mergePass(sortedRuns);
-//        }
-//        return sortedRuns.get(0).tableName();
+        while (sortedRuns.size() > 1) {
+            sortedRuns = mergePass(sortedRuns);
+        }
         return this.tableName;
     }
 
