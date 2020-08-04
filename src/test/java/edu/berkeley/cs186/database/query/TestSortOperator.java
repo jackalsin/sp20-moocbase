@@ -1,26 +1,41 @@
 package edu.berkeley.cs186.database.query;
 
-import edu.berkeley.cs186.database.*;
-import edu.berkeley.cs186.database.categories.*;
-import edu.berkeley.cs186.database.common.Pair;
+import edu.berkeley.cs186.database.Database;
+import edu.berkeley.cs186.database.TestUtils;
+import edu.berkeley.cs186.database.TimeoutScaling;
+import edu.berkeley.cs186.database.Transaction;
+import edu.berkeley.cs186.database.categories.Proj3Part1Tests;
+import edu.berkeley.cs186.database.categories.Proj3Tests;
+import edu.berkeley.cs186.database.categories.PublicTests;
 import edu.berkeley.cs186.database.concurrency.DummyLockContext;
 import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.Page;
-import org.junit.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
 import edu.berkeley.cs186.database.table.Record;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import static org.junit.Assert.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 @Category({Proj3Tests.class, Proj3Part1Tests.class})
 public class TestSortOperator {
@@ -319,8 +334,55 @@ public class TestSortOperator {
 
     @Test
     @Category(PublicTests.class)
+    public void testSortRandom10() {
+        try (Transaction transaction = d.beginTransaction()) {
+            transaction.createTable(TestUtils.createSchemaWithAllTypes(), "table");
+            final List<Record> inputRecords = new ArrayList<>(), expectedRecords = new ArrayList<>();
+            Record r1 = TestUtils.createRecordWithAllTypesWithValue(1);
+            Record r2 = TestUtils.createRecordWithAllTypesWithValue(2);
+            Record r3 = TestUtils.createRecordWithAllTypesWithValue(3);
+            Record r4 = TestUtils.createRecordWithAllTypesWithValue(4);
+            for (int i = 0; i < 400 * 2; i++) {
+                Record r;
+                if (i % 4 == 0) {
+                    r = r1;
+                } else if (i % 4 == 1) {
+                    r = r2;
+                } else if (i % 4 == 2) {
+                    r = r3;
+                } else {
+                    r = r4;
+                }
+                inputRecords.add(r);
+                expectedRecords.add(r);
+            }
+            for (final Record r : inputRecords) {
+                transaction.getTransactionContext().addRecord("table", r.getValues());
+            }
+            pinMetadata();
+            startCountIOs();
+            Collections.shuffle(inputRecords, new Random(10));
+            expectedRecords.sort(new SortRecordComparator(1));
+            SortOperator s = new SortOperator(transaction.getTransactionContext(), "table",
+                new SortRecordComparator(1));
+
+            String sortedTableName = s.sort();
+
+            Iterator<Record> iter = transaction.getTransactionContext().getRecordIterator(sortedTableName);
+            int i = 0;
+            while (iter.hasNext() && i < 400 * 2) {
+                assertEquals("mismatch at record " + i, expectedRecords.get(i), iter.next());
+                i++;
+            }
+            assertFalse("too many records", iter.hasNext());
+            assertEquals("too few records", 400 * 2, i);
+        }
+    }
+
+    @Test
+    @Category(PublicTests.class)
     public void testSortBackwards() {
-        try(Transaction transaction = d.beginTransaction()) {
+        try (Transaction transaction = d.beginTransaction()) {
             transaction.createTable(TestUtils.createSchemaWithAllTypes(), "table");
             Record[] records = new Record[400 * 3];
             for (int i = 400 * 3; i > 0; i--) {

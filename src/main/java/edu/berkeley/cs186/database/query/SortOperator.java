@@ -98,7 +98,7 @@ public class SortOperator {
     public Run mergeSortedRuns(List<Run> runs) {
         final List<Iterator<Record>> itrs = runs.stream().map(Run::iterator).collect(Collectors.toList());
         final Queue<Pair<Record, Integer>> pq =
-            new PriorityQueue<>((a, b) -> comparator.compare(a.getFirst(), b.getFirst()));
+            new PriorityQueue<>(new RecordPairComparator());
         for (int i = 0; i < runs.size(); i++) {
             final Iterator<Record> itr = itrs.get(i);
             if (itr.hasNext()) {
@@ -127,7 +127,7 @@ public class SortOperator {
      */
     public List<Run> mergePass(List<Run> runs) {
         final List<Run> result = new ArrayList<>();
-        final int step = this.numBuffers - 1;
+        final int step = numBuffers - 1;
         for (int start = 0; start < runs.size(); start += step) {
             result.add(mergeSortedRuns(runs.subList(start, Math.min(start + step, runs.size()))));
         }
@@ -151,7 +151,7 @@ public class SortOperator {
         while (sortedRuns.size() > 1) {
             sortedRuns = mergePass(sortedRuns);
         }
-        return this.tableName;
+        return sortedRuns.get(0).tableName();
     }
 
     public Iterator<Record> iterator() {
