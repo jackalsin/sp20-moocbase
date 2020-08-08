@@ -77,7 +77,6 @@ class BNLJOperator extends JoinOperator {
       } catch (NoSuchElementException e) {
         this.nextRecord = null;
       }
-      log("constructor");
     }
 
     /**
@@ -89,7 +88,6 @@ class BNLJOperator extends JoinOperator {
      * and leftRecord should be set to null.
      */
     private void fetchNextLeftBlock() {
-      log("fetch next left block");
       if (leftIterator.hasNext()) {
         leftRecordIterator = getBlockIterator(this.getLeftTableName(), leftIterator, numBuffers - 2);
         leftRecordIterator.markNext();
@@ -109,7 +107,6 @@ class BNLJOperator extends JoinOperator {
      * should be set to null.
      */
     private void fetchNextRightPage() {
-      log("Move right iterator.");
       if (rightIterator.hasNext()) {
         rightRecordIterator = getBlockIterator(this.getRightTableName(), rightIterator, 1);
         rightRecordIterator.markNext();
@@ -130,7 +127,7 @@ class BNLJOperator extends JoinOperator {
       }
       nextRecord = null;
       while (nextRecord == null) {
-        if (rightRecordIterator != null && rightRecordIterator.hasNext()) {
+        if (leftRecord != null && rightRecordIterator != null && rightRecordIterator.hasNext()) {
           final Record rightRecord = rightRecordIterator.next();
           final DataBox leftJoinKey = leftRecord.getValues().get(getLeftColumnIndex()),
               rightJoinKey = rightRecord.getValues().get(getRightColumnIndex());
@@ -139,8 +136,10 @@ class BNLJOperator extends JoinOperator {
             return; // found
           }
         } else {
-          if (leftRecordIterator != null && leftRecordIterator.hasNext()) {  // move left if possible
-//            log("Move left record.");
+          if (leftRecord == null && !leftIterator.hasNext()) {
+            assert leftRecordIterator == null;
+            break;
+          } else if (leftRecordIterator != null && leftRecordIterator.hasNext()) {  // move left if possible
             leftRecord = leftRecordIterator.next();
             rightRecordIterator.reset();
           } else if (rightIterator != null && rightIterator.hasNext()) {
@@ -149,20 +148,14 @@ class BNLJOperator extends JoinOperator {
             leftRecord = leftRecordIterator.next();
           } else {
             fetchNextLeftBlock();
-            log("reset right iterator");
+            if (leftRecord == null) {
+              assert !leftIterator.hasNext();
+              break;
+            }
             rightIterator.reset();
             fetchNextRightPage();
           }
         }
-      }
-    }
-
-    private int i = 0;
-    private boolean DEBUG = false;
-
-    private void log(String line) {
-      if (DEBUG) {
-        System.out.println(line);
       }
     }
 
