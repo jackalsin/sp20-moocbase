@@ -1,44 +1,33 @@
 package edu.berkeley.cs186.database.query;
 
-import edu.berkeley.cs186.database.Database;
-import edu.berkeley.cs186.database.TestUtils;
-import edu.berkeley.cs186.database.TimeoutScaling;
-import edu.berkeley.cs186.database.Transaction;
-import edu.berkeley.cs186.database.categories.Proj3Part1Tests;
-import edu.berkeley.cs186.database.categories.Proj3Tests;
-import edu.berkeley.cs186.database.categories.PublicTests;
+import edu.berkeley.cs186.database.*;
+import edu.berkeley.cs186.database.categories.*;
 import edu.berkeley.cs186.database.concurrency.DummyLockContext;
+import edu.berkeley.cs186.database.io.DiskSpaceManager;
+import edu.berkeley.cs186.database.memory.Page;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
 import edu.berkeley.cs186.database.databox.BoolDataBox;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.FloatDataBox;
 import edu.berkeley.cs186.database.databox.IntDataBox;
 import edu.berkeley.cs186.database.databox.StringDataBox;
-import edu.berkeley.cs186.database.io.DiskSpaceManager;
-import edu.berkeley.cs186.database.memory.Page;
 import edu.berkeley.cs186.database.table.Record;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+
 import org.junit.experimental.categories.Category;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 @Category({Proj3Tests.class, Proj3Part1Tests.class})
 public class TestJoinOperator {
