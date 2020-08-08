@@ -70,7 +70,7 @@ public class TestJoinOperator {
     // 4 second max per method tested.
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(Timeout.millis((long) (
-        40000 * TimeoutScaling.factor)));
+        4000 * TimeoutScaling.factor)));
 
     private void startCountIOs() {
         d.getBufferManager().evictAll();
@@ -88,7 +88,7 @@ public class TestJoinOperator {
         long IOs = newIOs - numIOs;
 
         assertTrue(IOs + " I/Os not between " + minIOs + " and " + maxIOs + message,
-                   minIOs <= IOs && IOs <= maxIOs);
+            minIOs <= IOs && IOs <= maxIOs);
         numIOs = newIOs;
     }
 
@@ -156,7 +156,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new PNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -199,7 +199,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new BNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -278,7 +278,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             QueryOperator joinOperator = new PNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             int count = 0;
@@ -336,8 +336,8 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new SortMergeOperator(leftSourceOperator, rightSourceOperator, "int",
-                    "int",
-                    transaction.getTransactionContext());
+                "int",
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -369,7 +369,6 @@ public class TestJoinOperator {
     @Test
     @Category(PublicTests.class)
     public void testSortMergeJoinUnsortedInputs()  {
-        final int entryPerPage = 400;
         d.setWorkMem(3); // B=3
         try(Transaction transaction = d.beginTransaction()) {
             transaction.createTable(TestUtils.createSchemaWithAllTypes(), "leftTable");
@@ -399,7 +398,7 @@ public class TestJoinOperator {
             Record expectedRecord4 = new Record(expectedRecordValues4);
             List<Record> leftTableRecords = new ArrayList<>();
             List<Record> rightTableRecords = new ArrayList<>();
-            for (int i = 0; i < entryPerPage * 2; i++) {
+            for (int i = 0; i < 400 * 2; i++) {
                 Record r;
                 if (i % 4 == 0) {
                     r = r1;
@@ -415,7 +414,7 @@ public class TestJoinOperator {
             }
             Collections.shuffle(leftTableRecords, new Random(10));
             Collections.shuffle(rightTableRecords, new Random(20));
-            for (int i = 0; i < entryPerPage * 2; i++) {
+            for (int i = 0; i < 400 * 2; i++) {
                 transaction.getTransactionContext().addRecord("leftTable", leftTableRecords.get(i).getValues());
                 transaction.getTransactionContext().addRecord("rightTable", rightTableRecords.get(i).getValues());
             }
@@ -438,12 +437,12 @@ public class TestJoinOperator {
             int numRecords = 0;
             Record expectedRecord;
 
-            while (outputIterator.hasNext() && numRecords < entryPerPage * entryPerPage) {
-                if (numRecords < (entryPerPage * entryPerPage / 4)) {
+            while (outputIterator.hasNext() && numRecords < 400 * 400) {
+                if (numRecords < (400 * 400 / 4)) {
                     expectedRecord = expectedRecord1;
-                } else if (numRecords < (entryPerPage * entryPerPage / 2)) {
+                } else if (numRecords < (400 * 400 / 2)) {
                     expectedRecord = expectedRecord2;
-                } else if (numRecords < entryPerPage * entryPerPage - (entryPerPage * entryPerPage / 4)) {
+                } else if (numRecords < 400 * 400 - (400 * 400 / 4)) {
                     expectedRecord = expectedRecord3;
                 } else {
                     expectedRecord = expectedRecord4;
@@ -455,7 +454,7 @@ public class TestJoinOperator {
             checkIOs(0);
 
             assertFalse("too many records", outputIterator.hasNext());
-            assertEquals("too few records", entryPerPage * entryPerPage, numRecords);
+            assertEquals("too few records", 400 * 400, numRecords);
         }
     }
 
@@ -513,7 +512,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             QueryOperator joinOperator = new BNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
