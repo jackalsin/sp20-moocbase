@@ -71,7 +71,8 @@ class SortMergeOperator extends JoinOperator {
         private SortMergeIterator() {
             super();
             try {
-                bf = new BufferedWriter(new FileWriter("output.log"));
+                String fileName = "logs/" + String.valueOf(System.currentTimeMillis()) + ".log";
+                bf = new BufferedWriter(new FileWriter(fileName));
                 bf.write("");
             } catch (IOException e) {
                 e.printStackTrace();
@@ -88,9 +89,19 @@ class SortMergeOperator extends JoinOperator {
             leftIterator = getRecordIterator(sortedLeftTable);
             rightIterator = getRecordIterator(sortedRightTable);
             leftIterator.markNext();
-            rightIterator.markNext();
             leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
             rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+            rightIterator.markPrev();
+//            rightIterator.reset();
+//            while(rightIterator.hasNext()) {
+//                log(rightIterator.next().toString());
+//            }
+//            rightIterator.reset();
+//            while(rightIterator.hasNext()) {
+//                log(rightIterator.next().toString());
+//            }
+//            rightIterator.reset();
+
             fetchNextRecord();
         }
 
@@ -151,10 +162,10 @@ class SortMergeOperator extends JoinOperator {
                             if (leftIterator.hasNext()) {
                                 log("Moving Left " + count);
                                 leftRecord = leftIterator.next();
-
                                 if (recordComparator.compare(leftRecord, prevRightRecord) == 0) {
                                     resetRight();
                                 } else {
+                                    log("marking right prev");
                                     rightIterator.markPrev();
                                 }
                             } else {
@@ -217,6 +228,11 @@ class SortMergeOperator extends JoinOperator {
 
         private void resetRight() {
             log("Resetting right.");
+            try {
+                bf.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             rightIterator.reset();
             rightRecord = rightIterator.next();
         }
@@ -226,6 +242,7 @@ class SortMergeOperator extends JoinOperator {
             try {
                 bf.append("[" + count + "]" + str);
                 bf.append("\n");
+//                bf.flush();
             } catch (IOException e) {
                 e.printStackTrace();
             }
