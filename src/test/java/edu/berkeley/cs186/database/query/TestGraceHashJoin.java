@@ -1,25 +1,38 @@
 package edu.berkeley.cs186.database.query;
 
-import edu.berkeley.cs186.database.*;
-import edu.berkeley.cs186.database.categories.*;
+import edu.berkeley.cs186.database.Database;
+import edu.berkeley.cs186.database.TestUtils;
+import edu.berkeley.cs186.database.Transaction;
+import edu.berkeley.cs186.database.categories.Proj3Part1Tests;
+import edu.berkeley.cs186.database.categories.Proj3Tests;
+import edu.berkeley.cs186.database.categories.PublicTests;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.common.iterator.ArrayBacktrackingIterator;
 import edu.berkeley.cs186.database.common.iterator.BacktrackingIterator;
-import edu.berkeley.cs186.database.databox.*;
+import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.memory.Page;
+import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.Schema;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import edu.berkeley.cs186.database.table.Record;
-
-import static org.junit.Assert.*;
-import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category({Proj3Tests.class, Proj3Part1Tests.class})
 public class TestGraceHashJoin {
