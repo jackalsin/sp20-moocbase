@@ -3,12 +3,17 @@ package edu.berkeley.cs186.database.query;
 import edu.berkeley.cs186.database.TransactionContext;
 import edu.berkeley.cs186.database.common.HashFunc;
 import edu.berkeley.cs186.database.common.Pair;
-import edu.berkeley.cs186.database.databox.*;
+import edu.berkeley.cs186.database.databox.DataBox;
+import edu.berkeley.cs186.database.databox.IntDataBox;
 import edu.berkeley.cs186.database.memory.HashPartition;
 import edu.berkeley.cs186.database.table.Record;
 import edu.berkeley.cs186.database.table.Schema;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public class GraceHashJoin {
@@ -59,14 +64,20 @@ public class GraceHashJoin {
         assert pass >= 1;
         Function<DataBox, Integer> hashFunc = HashFunc.getHashFunction(pass); // Use this to hash!
         int columnIndex = left ? getLeftColumnIndex() : getRightColumnIndex();
-
-        // TODO(proj3_part1): implement the partitioning logic
-        // You may find the implementation in NaiveHashJoin.java to be a good
-        // starting point. Make sure to use the hash function we provide to you
-        // by calling hashFunc.apply(databox) to get an integer valued hash code
-        // from a DataBox object.
-
-        return;
+        while (records.hasNext()) {
+            final Record record = records.next();
+            DataBox columnValue = record.getValues().get(columnIndex);
+            int hash = hashFunc.apply(columnValue);
+            int partitionNum = (hash % partitions.length); // Modulo to get which partition to use
+            if (partitionNum < 0) {
+                partitionNum += partitions.length;    // Hash might be negative
+            }
+            if (left) {
+                partitions[partitionNum].addLeftRecord(record);
+            } else {
+                partitions[partitionNum].addRightRecord(record);
+            }
+        }
     }
 
     /**
@@ -100,26 +111,31 @@ public class GraceHashJoin {
         } else {
             throw new IllegalArgumentException(
                 "Neither the left nor the right records in this partition " +
-                "fit in B-2 pages of memory."
+                    "fit in B-2 pages of memory. left = " + partition.getNumLeftPages() + ", right = "
+                    + partition.getNumRightPages() + ", numBuffers = " + numBuffers
             );
         }
         if (!materializeJoin) {
             // For the student input tests we don't want to materialize the
             // joined records as it may consume excessive resources
-            return new ArrayList<Record>();
+            return new ArrayList<>();
         }
-
+        final Map<DataBox, List<Record>> hashTable = new HashMap<>();
+        while (buildRecords.hasNext()) {
+            final Record record = buildRecords.next();
+            hashTable.computeIfAbsent(record.getValues().get(buildColumnIndex), k -> new ArrayList<>()).add(record);
+        }
         // Add all the results of build and probe here
-        ArrayList<Record> joinedRecords = new ArrayList<Record>();
-
-        // TODO(proj3_part1): implement the building and probing stage
-
-        // You shouldn't refer to any variable starting with "left" or "right" here
-        // Use the "build" and "probe" variables we set up for you
-        // Check out how NaiveHashJoin implements this function if you feel stuck.
-
-        // Return the records
-        return joinedRecords;
+        List<Record> result = new ArrayList<>();
+        while (probeRecords.hasNext()) {
+            final Record probeRecord = probeRecords.next();
+            final DataBox key = probeRecord.getValues().get(probeColumnIndex);
+            final List<Record> matched = hashTable.getOrDefault(key, new ArrayList<>());
+            for (final Record buildRecord : matched) {
+                result.add(joinRecords(buildRecord, probeRecord, probeFirst));
+            }
+        }
+        return result;
     }
 
     /**
@@ -142,26 +158,30 @@ public class GraceHashJoin {
         }
 
         HashPartition[] partitions = createPartitions();
-        this.partition(partitions, leftRecords, true, pass);
-        this.partition(partitions, rightRecords, false, pass);
+        partition(partitions, leftRecords, true, pass);
+        partition(partitions, rightRecords, false, pass);
 
         // Accumulate all the records from the join here
-        ArrayList<Record> joinedRecords = new ArrayList<>();
+        List<Record> result = new ArrayList<>();
 
         for (HashPartition partition : partitions) {
-            // TODO(proj3_part1): implement the rest of grace hash join in this for loop
-            //
             // If you can run the build and probe phase on a partition you should
-            // do so immediately and add its records to joinedRecords.
+            // do so immediately and add its records to result.
             //
             // Otherwise you should add the results of recursively running
             // the grace hash join algorithm on the partition
-            // to joinedRecords.
+            // to result.
             //
             // You may find the ArrayList.addAll method useful here.
             // It may be helpful to read through the HashPartition.java class for methods that will be useful here
+            final int left = partition.getNumLeftPages(), right = partition.getNumRightPages();
+            if (left > numBuffers - 2 && right > numBuffers - 2) {
+                result.addAll(run(partition.getLeftIterator(), partition.getRightIterator(), pass + 1));
+            } else {
+                result.addAll(buildAndProbe(partition));
+            }
         }
-        return joinedRecords;
+        return result;
     }
 
     public List<Record> begin() {
@@ -178,11 +198,14 @@ public class GraceHashJoin {
      * @return an array of HashPartitions
      */
     private HashPartition[] createPartitions() {
-        // TODO(proj3_part1): create an array of partitions
         // You may find the provided helper function
         // createPartition() useful here.
-
-        return null;
+        final int len = numBuffers - 1;
+        final HashPartition[] result = new HashPartition[len];
+        for (int i = 0; i < len; ++i) {
+            result[i] = createPartition();
+        }
+        return result;
     }
 
     // Feel free to add your own helper methods here if you wish to do so
@@ -276,9 +299,11 @@ public class GraceHashJoin {
     public static Pair<List<Record>, List<Record>> getBreakNHJInputs() {
         ArrayList<Record> leftRecords = new ArrayList<>();
         ArrayList<Record> rightRecords = new ArrayList<>();
-
-        // TODO(proj3_part1): populate leftRecords and rightRecords such that NHJ breaks but not GHJ
-
+        for (int i = 0; i < 976 * 6 * 5; i++) {
+            final Record key = createRecord(i);
+            leftRecords.add(key);
+            rightRecords.add(key);
+        }
         return new Pair<>(leftRecords, rightRecords);
     }
 
@@ -302,8 +327,10 @@ public class GraceHashJoin {
         ArrayList<Record> leftRecords = new ArrayList<>();
         ArrayList<Record> rightRecords = new ArrayList<>();
 
-        // TODO(proj3_part1): populate leftRecords and rightRecords such that GHJ breaks
-
+        for (int i = 0; i < 976 * 5; ++i) {
+            leftRecords.add(createRecord(0));
+            rightRecords.add(createRecord(0));
+        }
         return new Pair<>(leftRecords, rightRecords);
     }
 }

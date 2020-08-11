@@ -59,7 +59,7 @@ public class TestJoinOperator {
     // 4 second max per method tested.
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(Timeout.millis((long) (
-                4000 * TimeoutScaling.factor)));
+        4000 * TimeoutScaling.factor)));
 
     private void startCountIOs() {
         d.getBufferManager().evictAll();
@@ -77,7 +77,7 @@ public class TestJoinOperator {
         long IOs = newIOs - numIOs;
 
         assertTrue(IOs + " I/Os not between " + minIOs + " and " + maxIOs + message,
-                   minIOs <= IOs && IOs <= maxIOs);
+            minIOs <= IOs && IOs <= maxIOs);
         numIOs = newIOs;
     }
 
@@ -145,7 +145,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new PNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -188,7 +188,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new BNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -267,7 +267,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             QueryOperator joinOperator = new PNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             int count = 0;
@@ -325,8 +325,8 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new SortMergeOperator(leftSourceOperator, rightSourceOperator, "int",
-                    "int",
-                    transaction.getTransactionContext());
+                "int",
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -416,8 +416,8 @@ public class TestJoinOperator {
             startCountIOs();
 
             JoinOperator joinOperator = new SortMergeOperator(leftSourceOperator, rightSourceOperator, "int",
-                    "int",
-                    transaction.getTransactionContext());
+                "int",
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
@@ -501,7 +501,7 @@ public class TestJoinOperator {
             startCountIOs();
 
             QueryOperator joinOperator = new BNLJOperator(leftSourceOperator, rightSourceOperator, "int", "int",
-                    transaction.getTransactionContext());
+                transaction.getTransactionContext());
             checkIOs(0);
 
             Iterator<Record> outputIterator = joinOperator.iterator();
